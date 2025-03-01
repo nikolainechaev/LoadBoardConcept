@@ -1,0 +1,9 @@
+- To start the backend:
+
+  - use dotnet version 9
+  - cd into `./API/` and run `dotnet run`
+  - use `http://localhost:7284` and check `https://localhost:7284/api/user/public` endpoint
+
+- To do list:
+- test auth and current endpoints in controller
+- create collection in Postman
