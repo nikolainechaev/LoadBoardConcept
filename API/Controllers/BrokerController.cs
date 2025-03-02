@@ -46,4 +46,20 @@ public class BrokerController : ControllerBase
 		broker.Id = doc.Id;
 		return Ok(broker);
 	}
+	[HttpPut("{id}")]
+	public async Task<IActionResult> UpdateBroker(string id, [FromBody] Broker broker)
+	{
+		var docRef = _firestore.Collection("brokers").Document(id);
+		await docRef.SetAsync(broker, SetOptions.Overwrite);
+		return Ok(new { Message = "Broker updated successfully." });
+	}
+
+	[HttpDelete("{id}")]
+	public async Task<IActionResult> DeleteBroker(string id)
+	{
+		var docRef = _firestore.Collection("brokers").Document(id);
+		await docRef.DeleteAsync();
+		return Ok(new { message = "Broker has been deleted" });
+	}
+
 }
