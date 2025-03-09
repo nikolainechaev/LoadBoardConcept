@@ -3,6 +3,7 @@
   - use dotnet version 9
   - cd into `./API/` and run `dotnet run`
   - use `http://localhost:7284` and check `https://localhost:7284/api/user/public` endpoint
+  - run `export GOOGLE_APPLICATION_CREDENTIALS="/Users/nikolainechaev/Desktop/practice/LoadboardNov24/LoadBoard2025/API/Configs/firebase-adminsdk.json"' >> ~/.zshrc`
 
 - To do list:
 - test auth and current endpoints in controller

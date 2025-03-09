@@ -1,43 +1,66 @@
+using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
-using Google.Cloud.Firestore.V1;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using System.IO;
+using System.Net.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Load Firestore Credentials
-var credentialPath = builder.Configuration["Firebase:PrivateKeyPath"];
-if (string.IsNullOrEmpty(credentialPath) || !File.Exists(credentialPath))
-{
-    throw new FileNotFoundException($"Firestore credentials file not found: {credentialPath}");
-}
+// Load Firebase Credentials
+var privateKeyPath = Path.GetFullPath(builder.Configuration["Firebase:PrivateKeyPath"]);
 
-GoogleCredential googleCredential;
-using (var stream = new FileStream(credentialPath, FileMode.Open, FileAccess.Read))
+Console.WriteLine($"Resolved Firebase Private Key Path: {privateKeyPath}");
+FirebaseApp.Create(new AppOptions
 {
-    googleCredential = GoogleCredential.FromStream(stream);
-}
+    Credential = GoogleCredential.FromFile(privateKeyPath)
+});
 
-var firestoreClientBuilder = new FirestoreClientBuilder
-{
-    Credential = googleCredential
-};
-
-var firestoreDb = FirestoreDb.Create(builder.Configuration["Firebase:ProjectId"], firestoreClientBuilder.Build());
+// Initialize Firestore
+var firestoreDb = FirestoreDb.Create(builder.Configuration["Firebase:ProjectId"]);
 builder.Services.AddSingleton(firestoreDb);
 
-// Add services to the container
+// Add authentication with Firebase
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = $"https://securetoken.google.com/{builder.Configuration["Firebase:ProjectId"]}";
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = $"https://securetoken.google.com/{builder.Configuration["Firebase:ProjectId"]}",
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Firebase:ProjectId"],
+            ValidateLifetime = true
+        };
+    });
+
+builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp",
+        policy => policy
+            .WithOrigins("http://localhost:3000") // React frontend URL
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
+
 var app = builder.Build();
 
+app.UseCors("AllowReactApp"); // Apply CORS policy
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
